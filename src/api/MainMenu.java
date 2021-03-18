@@ -1,12 +1,10 @@
 package api;
 
-import model.Customer;
-import model.Reservation;
-import model.Room;
-import model.RoomType;
+import model.*;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
@@ -32,6 +30,7 @@ public class MainMenu {
                     break;
                 case '2':
                     System.out.println ( "See my reservation" );
+                    getAllReservationsForACustomer();
                     break;
                 case '3':
                     System.out.println ( "Create an account" );
@@ -50,10 +49,11 @@ public class MainMenu {
                                 break;
                             case '2':
                                 System.out.println("See all Rooms");
-                                displayAllRooms();
+                                displayAllRooms(adminResource.getAllRooms());
                                 break;
                             case '3':
                                 System.out.println("See all Reservations");
+                                displayAllReservations();
                                 break;
                             case '4':
                                 System.out.println("Add a Room");
@@ -99,15 +99,17 @@ public class MainMenu {
 
     public static void createAnAccount() {
         String firstName = "", lastName = "", email = "";
-        Scanner scanner = new Scanner(System.in);
+        Scanner in = new Scanner(System.in);
 
         System.out.println("Enter your first name");
-        firstName = scanner.nextLine();
+        firstName = in.nextLine();
         System.out.println("Enter your last name");
-        lastName = scanner.nextLine();
+        lastName = in.nextLine();
         System.out.println("Enter your email");
-        email = scanner.nextLine();
+        email = in.nextLine();
         hotelResource.createACustomer(firstName, lastName, email);
+
+
     }
 
     public static void displayAllCustomers() {
@@ -149,7 +151,7 @@ public class MainMenu {
         adminResource.AddARoom(roomNumber, price, type);
     }
 
-    public static void getAllSeservationForACustomer() {
+    public static void getAllReservationsForACustomer() {
         Scanner in = new Scanner(System.in);
         System.out.println("All Reservations For A Customer");
         System.out.println("Please enter your email");
@@ -160,8 +162,12 @@ public class MainMenu {
         }
     }
 
-    public static void displayAllRooms() {
-        List<Room> rooms = adminResource.getAllRooms();
+    public static void displayAllReservations() {
+        hotelResource.reservationService.printAllReservation();
+    }
+
+    public static void displayAllRooms(List<Room> rooms) {
+        //List<Room> rooms = adminResource.getAllRooms();
         System.out.println("Room # | Price | Type");
         for (Room r : rooms) {
             System.out.println(r.getRoomNumber() + "  | " + r.getRoomPrice() + " | " + r.getRoomType());
@@ -170,8 +176,7 @@ public class MainMenu {
 
     public static void reserveARoom() {
         Scanner in = new Scanner(System.in);
-        String checkInString = "";
-        String checkOutString = "";
+        String checkInString = "", checkOutString = "";
 
         System.out.println("Enter check in date: dd-MMM-yyyy");
         checkInString = in.nextLine();
@@ -181,11 +186,27 @@ public class MainMenu {
         System.out.println("Enter check out date: dd-MMM-yyyy");
         checkOutString = in.nextLine();
         Date checkOut = convertDateFromString(checkOutString);
+
+        List<Room> rooms = new ArrayList<>();
+        // check out date has to be after check in date
+        if ((checkOut.after(checkIn))) {
+           rooms = hotelResource.findARoom(checkIn, checkOut);
+           displayAllRooms(rooms);
+        }
+
+        // do we have at least a room to rent during this check in/out period?
+        if (rooms.size() > 0) {
+            System.out.println("Enter a room number from the list of room above");
+            String roomNumber = in.nextLine();
+            IRoom room = hotelResource.getRoom(roomNumber);
+            System.out.println("Enter your email address");
+            String email = in.nextLine();
+            hotelResource.bookARoom(email, room, checkIn, checkOut);
+        }
     }
 
     public static Date convertDateFromString(String dateString) {
         SimpleDateFormat formatter = new SimpleDateFormat("dd-MMM-yyyy");
-        dateString = "11-MAR-2040";
         Date returnDate = null;
         try {
             returnDate = formatter.parse(dateString);
